@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 stonks = "stonksteller.cli:main"
+stonks-commands = "stonksteller.commands_cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]

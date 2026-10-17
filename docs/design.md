@@ -331,3 +331,35 @@ plan doesn't rest on memory.
   Early closes are modeled (2026-11-27 closes 13:00 ET).
 - Today's ET date must be derived from `datetime.now(ZoneInfo("America/New_York"))`,
   never from the runner's local clock, which is UTC on GitHub.
+
+## Discord commands (added 2026-10-17)
+
+Asked for after the first build: let allowlisted people edit the
+watchlist from the channel, through a pull request, with no backend.
+
+- A second scheduled workflow (`commands.yml`, every 30 minutes and on
+  demand) runs `stonks-commands`. It fetches the last 50 channel messages
+  with a bot token over plain HTTP (webhooks can only send), so a bot
+  application with the Message Content intent is required for this
+  feature only; hourly posts keep using the webhook.
+- Commands: `!stonks add SYMBOL`, `!stonks remove SYMBOL`, `!stonks list`.
+  A `!` prefix, because `/` would be interpreted by Discord as a slash
+  command, which needs an interaction endpoint.
+- Authorization: `[commands] allowed_users` in `config.toml`, a list of
+  Discord user IDs (not names). An empty list makes the runner exit 2
+  without touching anything. Commands from anyone else get a ❌ reaction
+  and no reply. Messages from bots are ignored.
+- Memory: the bot's own reaction on a message marks it handled, so there
+  is no state file. Messages are processed oldest first.
+- Validation: strict symbol pattern, then a Yahoo lookup for adds.
+  Adding a listed symbol or removing an unlisted one gets a reply and no
+  change.
+- Pull request: one branch `stonks/discord` and one open PR "Watchlist
+  changes from Discord" accumulate changes, one commit per command via the
+  GitHub contents API. If no PR is open, any stale branch is deleted and
+  recreated from the default branch. After merging, the next run starts
+  fresh. Uses the workflow's `GITHUB_TOKEN` (`contents: write`,
+  `pull-requests: write`) and needs the repository setting that lets
+  Actions create pull requests; a 403 is reported back in Discord.
+- Replies link the PR and never mention tokens; network errors are
+  reported by exception class only.

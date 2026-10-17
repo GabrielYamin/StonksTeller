@@ -78,9 +78,42 @@ One symbol per line. Blank lines and anything after `#` are ignored. Case doesn'
 
 A missing file means the defaults. Unknown keys are errors, so a typo can't silently do nothing.
 
+## Discord commands (optional)
+
+People on an allowlist can edit the watchlist from Discord. A second workflow polls the channel every 30 minutes and turns these messages into a pull request:
+
+```
+!stonks add QQQ
+!stonks remove SAIL
+!stonks list
+```
+
+The bot reacts ✅ or ❌ to each command and replies with the result. Add and remove requests accumulate in one pull request, "Watchlist changes from Discord", on the `stonks/discord` branch. Merge it when you're happy; the next poll starts a fresh one. A symbol is checked against Yahoo Finance before it's added, and anyone not on the allowlist just gets a ❌.
+
+Setup:
+
+1. **Create a bot.** [Developer Portal](https://discord.com/developers/applications), **New Application**, **Bot** tab, **Reset Token**: that's `DISCORD_BOT_TOKEN`. On the same page, under Privileged Gateway Intents, enable **Message Content Intent**, or the bot will see empty messages.
+2. **Invite it.** **OAuth2**, **URL Generator**: scope `bot`, permissions View Channel, Read Message History, Send Messages, Add Reactions (integer `68672`). Open the URL and add it to your server.
+3. **Channel ID.** With Developer Mode on, right-click the channel, **Copy Channel ID**: that's `DISCORD_CHANNEL_ID`.
+4. **Allowlist.** Right-click your own name, **Copy User ID**, and put it in `config.toml`:
+   ```toml
+   [commands]
+   allowed_users = ["123456789012345678"]
+   ```
+   The workflow refuses to run while this list is empty.
+5. **Secrets.** Add `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` as repository secrets, next to the webhook.
+6. **Let Actions open PRs.** Repo **Settings**, **Actions**, **General**, under Workflow permissions tick **Allow GitHub Actions to create and approve pull requests**. Without it the bot replies with a 403 from GitHub.
+
+Good to know:
+
+- Commands are picked up on the next poll (cron `7,37 * * * *`), not instantly. Change the cron if you want it faster; every run costs a few seconds of Actions time.
+- It's `!stonks`, not `/stonks`. A leading slash makes Discord try to run a real slash command, which would need a hosted endpoint.
+- The Tests workflow doesn't run on pull requests opened by the built-in Actions token. For a one-line watchlist change that's fine.
+- Locally, `uv run stonks-commands --dry-run` reads the channel and prints what it would do, with no reactions, replies or pull request. It needs the bot token and channel ID in `.env`.
+
 ## Behaviour and limits
 
-- Exit codes: `0` posted or market closed; `1` data or Discord failure; `2` bad input (missing file, bad config, missing or malformed webhook URL, too many symbols).
+- Exit codes (both commands): `0` done or nothing to do; `1` data, Discord or GitHub failure; `2` bad input (missing file, bad config, missing or malformed secrets, empty allowlist, too many symbols).
 - A symbol Yahoo can't find shows as an `n/a` row. If more than half the symbols have no price, the run treats it as an outage, posts nothing and fails, so it shows red in Actions.
 - One message per run. Around 100 symbols fit in Discord's 6000-character embed budget; past that the run fails with a clear message rather than truncating.
 - Prices come from Yahoo Finance through the unofficial `yfinance` library and may lag a few minutes. This is a glanceable pulse, not a trading feed.

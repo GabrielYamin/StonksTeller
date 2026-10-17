@@ -13,10 +13,16 @@ else:  # pragma: no cover - exercised only on Python 3.10
 COLUMNS = ("price", "open", "day", "week")
 PCT_COLUMNS = ("open", "day", "week")
 LAYOUTS = ("cards", "table")
+SECTIONS = ("display", "commands")
 
 
 class ConfigError(ValueError):
     """config.toml is malformed or holds an unknown or invalid value."""
+
+
+@dataclass(frozen=True)
+class CommandsConfig:
+    allowed_users: tuple[str, ...] = ()   # Discord user IDs allowed to run !stonks commands
 
 
 @dataclass(frozen=True)
@@ -30,32 +36,51 @@ class DisplayConfig:
 
 
 def load_config(path: Path) -> DisplayConfig:
-    """Load config.toml; a missing file means all defaults."""
+    """Load the [display] section of config.toml; a missing file means all defaults."""
     path = Path(path)
-    if not path.is_file():
-        return DisplayConfig()
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as exc:
-        raise ConfigError(f"{path}: invalid TOML: {exc}") from exc
-
-    unknown_sections = sorted(set(data) - {"display"})
-    if unknown_sections:
-        raise ConfigError(f"{path}: unknown section(s): {', '.join(unknown_sections)}")
-    display = data.get("display", {})
+    display = _read_toml(path).get("display", {})
     if not isinstance(display, dict):
         raise ConfigError(f"{path}: [display] must be a table")
-    known = {f.name for f in fields(DisplayConfig)}
-    unknown_keys = sorted(set(display) - known)
-    if unknown_keys:
-        raise ConfigError(f"{path}: unknown key(s) in [display]: {', '.join(unknown_keys)}")
-
+    _reject_unknown_keys(display, DisplayConfig, "display", path)
     values = dict(display)
     if isinstance(values.get("columns"), list):
         values["columns"] = tuple(values["columns"])
     config = DisplayConfig(**values)
     _validate(config, path)
     return config
+
+
+def load_commands_config(path: Path) -> CommandsConfig:
+    """Load the [commands] section of config.toml; missing file or section means no one is allowed."""
+    path = Path(path)
+    commands = _read_toml(path).get("commands", {})
+    if not isinstance(commands, dict):
+        raise ConfigError(f"{path}: [commands] must be a table")
+    _reject_unknown_keys(commands, CommandsConfig, "commands", path)
+    users = commands.get("allowed_users", [])
+    if not isinstance(users, list) or not all(isinstance(u, (str, int)) and str(u).isdigit() for u in users):
+        raise ConfigError(f"{path}: allowed_users must be a list of Discord user IDs (digits)")
+    return CommandsConfig(allowed_users=tuple(str(u) for u in users))
+
+
+def _read_toml(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigError(f"{path}: invalid TOML: {exc}") from exc
+    unknown_sections = sorted(set(data) - set(SECTIONS))
+    if unknown_sections:
+        raise ConfigError(f"{path}: unknown section(s): {', '.join(unknown_sections)}")
+    return data
+
+
+def _reject_unknown_keys(table: dict, cls, section: str, path: Path) -> None:
+    known = {f.name for f in fields(cls)}
+    unknown_keys = sorted(set(table) - known)
+    if unknown_keys:
+        raise ConfigError(f"{path}: unknown key(s) in [{section}]: {', '.join(unknown_keys)}")
 
 
 def _validate(config: DisplayConfig, path: Path) -> None:

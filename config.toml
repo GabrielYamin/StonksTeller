@@ -6,3 +6,9 @@ sort = "file"                               # "file" order, or "open" / "day" / 
 emoji = true                                # 🟢 / 🔴 / ⚪ next to every percentage
 color_by = "open"                           # column that drives the embed colour (green/red/grey)
 layout = "cards"                            # "cards": one small card per symbol, 3 across, phone-friendly; "table": monospace grid, desktop
+
+# Who may run `!stonks add / remove / list` in the channel, as Discord user IDs.
+# Discord: User Settings > Advanced > Developer Mode, then right-click a user > Copy User ID.
+# With an empty list the commands workflow refuses to act on anything.
+[commands]
+allowed_users = []

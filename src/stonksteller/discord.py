@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 import time
 from typing import Callable
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import requests
 
 from . import __version__
 
+API_BASE = "https://discord.com/api/v10"
 USER_AGENT = f"StonksTeller (https://github.com/GabrielYamin/StonksTeller, {__version__})"
 TIMEOUT = 15.0
 WEBHOOK_HOSTS = ("discord.com", "discordapp.com", "ptb.discord.com", "canary.discord.com")
@@ -89,3 +90,50 @@ def _retry_after(response) -> float:
         return float(response.headers.get("Retry-After"))
     except (TypeError, ValueError):
         return 1.0
+
+
+class BotClient:
+    """Minimal Discord REST client for a bot token: read a channel, react, reply."""
+
+    def __init__(self, token: str, *, session=None, sleep: Callable[[float], None] = time.sleep):
+        self._session = session if session is not None else requests.Session()
+        self._headers = {"Authorization": f"Bot {token}", "User-Agent": USER_AGENT}
+        self._sleep = sleep
+
+    def list_messages(self, channel_id: str, limit: int = 50) -> list[dict]:
+        """Recent messages, newest first, as Discord returns them."""
+        return self._request("GET", f"/channels/{channel_id}/messages", params={"limit": str(limit)}) or []
+
+    def add_reaction(self, channel_id: str, message_id: str, emoji: str) -> None:
+        self._request("PUT", f"/channels/{channel_id}/messages/{message_id}/reactions/{quote(emoji)}/@me")
+
+    def reply(self, channel_id: str, message_id: str, content: str) -> None:
+        self._request("POST", f"/channels/{channel_id}/messages", json={
+            "content": content,
+            "message_reference": {"message_id": message_id},
+            "allowed_mentions": {"parse": []},
+        })
+
+    def guild_id(self, channel_id: str) -> str | None:
+        channel = self._request("GET", f"/channels/{channel_id}") or {}
+        return channel.get("guild_id")
+
+    def _request(self, method: str, path: str, *, params=None, json=None):
+        response = self._send(method, path, params, json)
+        if response.status_code == 429:
+            wait = _retry_after(response)
+            log.warning("Discord rate limited; retrying in %.1fs", wait)
+            self._sleep(wait)
+            response = self._send(method, path, params, json)
+        if not _ok(response):
+            raise DiscordError(_describe(response))
+        if response.status_code == 204 or not response.text:
+            return None
+        return response.json()
+
+    def _send(self, method: str, path: str, params, json):
+        try:
+            return self._session.request(method, API_BASE + path, params=params, json=json,
+                                         headers=self._headers, timeout=TIMEOUT)
+        except requests.RequestException as exc:
+            raise DiscordError(f"request to Discord failed: {type(exc).__name__}") from None

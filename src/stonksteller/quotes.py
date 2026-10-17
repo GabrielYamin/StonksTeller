@@ -100,6 +100,18 @@ def fetch_quotes(
     return result
 
 
+def symbol_known(symbol: str) -> bool:
+    """True if Yahoo Finance returns any daily close for the symbol in the last month."""
+    import yfinance as yf
+
+    history = yf.download(
+        [symbol], period="1mo", interval="1d", group_by="ticker",
+        auto_adjust=False, progress=False, threads=False,
+    )
+    sub = _per_symbol(history, [symbol], symbol)
+    return sub is not None and bool(_by_date(sub, "Close"))
+
+
 def _fast_info_fallback(quote: Quote) -> Quote:
     import yfinance as yf
 

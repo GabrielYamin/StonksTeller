@@ -92,3 +92,45 @@ def test_connection_errors_never_mention_the_url():
     assert "ConnectionError" in str(exc.value)
     assert "SECRET" not in str(exc.value)
     assert exc.value.__cause__ is None and exc.value.__suppress_context__
+
+
+# ---- BotClient ----
+from stonksteller.discord import BotClient  # noqa: E402
+
+
+class FakeApiSession:
+    def __init__(self, responses):
+        self.responses, self.calls = list(responses), []
+
+    def request(self, method, url, *, params, json, headers, timeout):
+        self.calls.append((method, url, params, json, headers))
+        return self.responses.pop(0)
+
+
+def test_bot_lists_messages_with_bot_auth_and_limit():
+    s = FakeApiSession([FakeResponse(200, '[{"id": "1"}]')])
+    assert BotClient("bottok", session=s).list_messages("123") == [{"id": "1"}]
+    method, url, params, _, headers = s.calls[0]
+    assert (method, url, params) == ("GET", "https://discord.com/api/v10/channels/123/messages", {"limit": "50"})
+    assert headers["Authorization"] == "Bot bottok"
+
+
+def test_bot_reaction_url_encodes_the_emoji():
+    s = FakeApiSession([FakeResponse(204)])
+    BotClient("bottok", session=s).add_reaction("123", "9", "✅")
+    assert s.calls[0][:2] == ("PUT", "https://discord.com/api/v10/channels/123/messages/9/reactions/%E2%9C%85/@me")
+
+
+def test_bot_reply_references_the_message_and_disables_mentions():
+    s = FakeApiSession([FakeResponse(200, '{"id": "10"}')])
+    BotClient("bottok", session=s).reply("123", "9", "hi")
+    assert s.calls[0][3] == {"content": "hi", "message_reference": {"message_id": "9"},
+                             "allowed_mentions": {"parse": []}}
+
+
+def test_bot_retries_once_on_429_then_raises_without_token():
+    s = FakeApiSession([FakeResponse(429, '{"retry_after": 0.5}'), FakeResponse(403, '{"message": "Missing Access"}')])
+    slept = []
+    with pytest.raises(DiscordError, match="Missing Access") as exc:
+        BotClient("bottok", session=s, sleep=slept.append).list_messages("123")
+    assert slept == [0.5] and "bottok" not in str(exc.value)

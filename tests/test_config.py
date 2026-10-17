@@ -1,6 +1,7 @@
 import pytest
 
-from stonksteller.config import ConfigError, DisplayConfig, load_config
+from stonksteller.config import (CommandsConfig, ConfigError, DisplayConfig, load_commands_config,
+                                 load_config)
 
 
 def test_missing_file_gives_defaults(tmp_path):
@@ -41,3 +42,30 @@ def test_invalid_config_raises(tmp_path, body):
     (tmp_path / "config.toml").write_text(body)
     with pytest.raises(ConfigError):
         load_config(tmp_path / "config.toml")
+
+
+def test_commands_config_defaults_to_nobody(tmp_path):
+    assert load_commands_config(tmp_path / "config.toml") == CommandsConfig()
+    (tmp_path / "config.toml").write_text('[display]\ntitle = "x"\n')
+    assert load_commands_config(tmp_path / "config.toml").allowed_users == ()
+
+
+def test_commands_config_reads_ids_as_strings(tmp_path):
+    (tmp_path / "config.toml").write_text('[commands]\nallowed_users = ["123", 456]\n')
+    assert load_commands_config(tmp_path / "config.toml") == CommandsConfig(allowed_users=("123", "456"))
+
+
+@pytest.mark.parametrize("body", [
+    '[commands]\nallowed_users = "123"\n',          # not a list
+    '[commands]\nallowed_users = ["gabe"]\n',       # not an ID
+    '[commands]\nallowed = ["123"]\n',              # unknown key
+])
+def test_invalid_commands_config_raises(tmp_path, body):
+    (tmp_path / "config.toml").write_text(body)
+    with pytest.raises(ConfigError):
+        load_commands_config(tmp_path / "config.toml")
+
+
+def test_display_config_tolerates_a_commands_section(tmp_path):
+    (tmp_path / "config.toml").write_text('[commands]\nallowed_users = ["123"]\n')
+    assert load_config(tmp_path / "config.toml") == DisplayConfig()
