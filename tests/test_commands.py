@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from stonksteller.commands import (Command, Outcome, WatchlistCommit, WatchlistPR, already_handled,
@@ -135,6 +137,20 @@ def test_run_commands_direct_mode_wording():
         ("1", "**QQQ** added to the watchlist. The next hourly post will include it."),
         ("2", "**SPY** removed from the watchlist."),
     ]
+
+
+def test_run_commands_warns_when_discord_hides_message_content(caplog):
+    caplog.set_level(logging.INFO)
+    bot = FakeBot([msg("2", ""), msg("1", ""), {"id": "0", "content": "", "webhook_id": "w", "author": {"id": "9"}}])
+    assert run_commands(bot, "c", FakePR(TEXT), ALLOWED, known) == []
+    assert "Message Content Intent" in caplog.text
+    assert "fetched 3 messages, 2 from people" in caplog.text
+
+
+def test_run_commands_does_not_warn_when_content_is_visible(caplog):
+    bot = FakeBot([msg("1", "hello")])
+    assert run_commands(bot, "c", FakePR(TEXT), ALLOWED, known) == []
+    assert "Message Content Intent" not in caplog.text
 
 
 def test_run_commands_dry_run_touches_nothing():

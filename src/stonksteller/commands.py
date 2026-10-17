@@ -148,6 +148,11 @@ def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | WatchlistCom
                  local_text: str = "") -> list[Outcome]:
     """Read the channel, act on new commands oldest first, then react and reply to each."""
     messages = bot.list_messages(channel_id)
+    human = [m for m in messages if not (m.get("author") or {}).get("bot") and not m.get("webhook_id")]
+    log.info("fetched %d messages, %d from people", len(messages), len(human))
+    if human and all(not m.get("content") for m in human):
+        log.warning("every message from a person came back with empty content: enable the "
+                    "Message Content Intent for the bot (Developer Portal > Bot > Privileged Gateway Intents)")
     pending = [command for message in reversed(messages)
                if not already_handled(message) and (command := parse_command(message)) is not None]
     if not pending:
