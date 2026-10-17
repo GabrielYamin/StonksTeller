@@ -11,4 +11,4 @@ layout = "cards"                            # "cards": one small card per symbol
 # Discord: User Settings > Advanced > Developer Mode, then right-click a user > Copy User ID.
 # With an empty list the commands workflow refuses to act on anything.
 [commands]
-allowed_users = []
+allowed_users = ["120176321585348608", "307237782630170647"]
