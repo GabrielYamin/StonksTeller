@@ -121,7 +121,29 @@ class WatchlistPR:
         return self.pull["html_url"]
 
 
-def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | None, allowed_users: Iterable[str],
+class WatchlistCommit:
+    """Applies requested changes straight to the default branch, one commit per command."""
+
+    def __init__(self, repo: GitHubRepo, path: str = "stonks.txt"):
+        self.repo = repo
+        self.path = path
+        self.base = "main"
+        self.text = ""
+        self._sha = ""
+
+    def open(self) -> None:
+        self.base = self.repo.default_branch()
+        self.text, self._sha = self.repo.read_file(self.path, self.base)
+
+    def commit(self, new_text: str, message: str) -> None:
+        self._sha = self.repo.write_file(self.path, self.base, new_text, self._sha, message)
+        self.text = new_text
+
+    def finish(self) -> None:
+        return None
+
+
+def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | WatchlistCommit | None, allowed_users: Iterable[str],
                  symbol_known: Callable[[str], bool], *, dry_run: bool = False,
                  local_text: str = "") -> list[Outcome]:
     """Read the channel, act on new commands oldest first, then react and reply to each."""
@@ -144,7 +166,7 @@ def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | None, allowe
             try:
                 pr.commit(*outcome.change)
             except GitHubError as exc:
-                outcome = Outcome(command, False, f"Couldn't update the pull request: {exc}")
+                outcome = Outcome(command, False, f"Couldn't update the watchlist on GitHub: {exc}")
         if outcome.change is not None:
             text = outcome.change[0]
         outcomes.append(outcome)
@@ -155,7 +177,7 @@ def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | None, allowe
         url = pr.finish()
     except GitHubError as exc:
         url = None
-        outcomes = [Outcome(o.command, False, f"Couldn't open the pull request: {exc}") if o.change else o
+        outcomes = [Outcome(o.command, False, f"Couldn't finish the change on GitHub: {exc}") if o.change else o
                     for o in outcomes]
     for outcome in outcomes:
         _announce(bot, channel_id, outcome, url)
@@ -165,8 +187,13 @@ def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | None, allowe
 def _announce(bot: BotClient, channel_id: str, outcome: Outcome, url: str | None) -> None:
     reply = outcome.reply
     if outcome.ok and outcome.change is not None:
-        verb = "added" if outcome.command.action == "add" else "removed"
-        reply = f"**{outcome.command.symbol}** will be {verb} when this pull request is merged: {url}"
+        symbol, adding = outcome.command.symbol, outcome.command.action == "add"
+        if url:
+            reply = f"**{symbol}** will be {'added' if adding else 'removed'} when this pull request is merged: {url}"
+        elif adding:
+            reply = f"**{symbol}** added to the watchlist. The next hourly post will include it."
+        else:
+            reply = f"**{symbol}** removed from the watchlist."
     try:
         bot.add_reaction(channel_id, outcome.command.message_id, OK if outcome.ok else NO)
         if reply:

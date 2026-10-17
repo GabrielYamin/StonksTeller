@@ -23,6 +23,7 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class CommandsConfig:
     allowed_users: tuple[str, ...] = ()   # Discord user IDs allowed to run !stonks commands
+    auto_apply: bool = True               # commit straight to the default branch (False: open a pull request)
 
 
 @dataclass(frozen=True)
@@ -60,7 +61,10 @@ def load_commands_config(path: Path) -> CommandsConfig:
     users = commands.get("allowed_users", [])
     if not isinstance(users, list) or not all(isinstance(u, (str, int)) and str(u).isdigit() for u in users):
         raise ConfigError(f"{path}: allowed_users must be a list of Discord user IDs (digits)")
-    return CommandsConfig(allowed_users=tuple(str(u) for u in users))
+    auto_apply = commands.get("auto_apply", True)
+    if not isinstance(auto_apply, bool):
+        raise ConfigError(f"{path}: auto_apply must be true or false")
+    return CommandsConfig(allowed_users=tuple(str(u) for u in users), auto_apply=auto_apply)
 
 
 def _read_toml(path: Path) -> dict:

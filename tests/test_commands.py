@@ -1,7 +1,7 @@
 import pytest
 
-from stonksteller.commands import (Command, Outcome, WatchlistPR, already_handled, decide,
-                                   parse_command, run_commands)
+from stonksteller.commands import (Command, Outcome, WatchlistCommit, WatchlistPR, already_handled,
+                                   decide, parse_command, run_commands)
 from stonksteller.github import GitHubError
 
 TEXT = "# list\nAAPL\nSPY  # etf\n"
@@ -123,6 +123,20 @@ def test_run_commands_processes_oldest_first_and_announces():
     ]
 
 
+def test_run_commands_direct_mode_wording():
+    class DirectTarget(FakePR):
+        def finish(self):
+            return None
+
+    bot = FakeBot([msg("2", "!stonks remove spy"), msg("1", "!stonks add qqq")])
+    outcomes = run_commands(bot, "c", DirectTarget(TEXT), ALLOWED, known)
+    assert all(o.ok for o in outcomes)
+    assert bot.replies == [
+        ("1", "**QQQ** added to the watchlist. The next hourly post will include it."),
+        ("2", "**SPY** removed from the watchlist."),
+    ]
+
+
 def test_run_commands_dry_run_touches_nothing():
     bot = FakeBot([msg("1", "!stonks add qqq")])
     outcomes = run_commands(bot, "c", None, ALLOWED, known, dry_run=True, local_text=TEXT)
@@ -221,3 +235,15 @@ def test_watchlist_pr_without_commits_creates_nothing():
     pr.open()
     assert pr.finish() is None
     assert not any(call[0] == "create_pull" for call in repo.calls)
+
+
+def test_watchlist_commit_writes_straight_to_the_default_branch():
+    repo = FakeRepo()
+    target = WatchlistCommit(repo)
+    target.open()
+    assert target.text == "AAPL\n"
+    target.commit("AAPL\nQQQ\n", "Add QQQ")
+    target.commit("QQQ\n", "Remove AAPL")
+    assert target.finish() is None
+    assert repo.calls == [("write_file", "main", "sha1", "Add QQQ"), ("write_file", "main", "sha2", "Remove AAPL")]
+    assert repo.text == "QQQ\n"

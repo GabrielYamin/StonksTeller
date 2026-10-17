@@ -12,3 +12,4 @@ layout = "cards"                            # "cards": one small card per symbol
 # With an empty list the commands workflow refuses to act on anything.
 [commands]
 allowed_users = ["120176321585348608", "307237782630170647"]
+auto_apply = true     # true: commit straight to main; false: open a pull request for you to merge

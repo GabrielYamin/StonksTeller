@@ -10,7 +10,7 @@ from typing import Sequence
 
 from dotenv import load_dotenv
 
-from .commands import NO, OK, WatchlistPR, run_commands
+from .commands import NO, OK, WatchlistCommit, WatchlistPR, run_commands
 from .config import ConfigError, load_commands_config
 from .discord import BotClient, DiscordError
 from .github import GitHubError, GitHubRepo
@@ -58,11 +58,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     bot = BotClient(os.environ["DISCORD_BOT_TOKEN"])
     channel_id = os.environ["DISCORD_CHANNEL_ID"]
-    pr = None if args.dry_run else WatchlistPR(GitHubRepo(os.environ["GITHUB_TOKEN"], os.environ["GITHUB_REPOSITORY"]))
+    target = None
+    if not args.dry_run:
+        repo = GitHubRepo(os.environ["GITHUB_TOKEN"], os.environ["GITHUB_REPOSITORY"])
+        target = WatchlistCommit(repo) if config.auto_apply else WatchlistPR(repo)
     local_text = args.watchlist.read_text(encoding="utf-8") if args.watchlist.is_file() else ""
 
     try:
-        outcomes = run_commands(bot, channel_id, pr, config.allowed_users, symbol_known,
+        outcomes = run_commands(bot, channel_id, target, config.allowed_users, symbol_known,
                                 dry_run=args.dry_run, local_text=local_text)
     except (DiscordError, GitHubError) as exc:
         log.error("%s", exc)

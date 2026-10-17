@@ -354,12 +354,15 @@ watchlist from the channel, through a pull request, with no backend.
 - Validation: strict symbol pattern, then a Yahoo lookup for adds.
   Adding a listed symbol or removing an unlisted one gets a reply and no
   change.
-- Pull request: one branch `stonks/discord` and one open PR "Watchlist
-  changes from Discord" accumulate changes, one commit per command via the
-  GitHub contents API. If no PR is open, any stale branch is deleted and
-  recreated from the default branch. After merging, the next run starts
-  fresh. Uses the workflow's `GITHUB_TOKEN` (`contents: write`,
-  `pull-requests: write`) and needs the repository setting that lets
-  Actions create pull requests; a 403 is reported back in Discord.
-- Replies link the PR and never mention tokens; network errors are
-  reported by exception class only.
+- Applying changes: by default (`auto_apply = true`) each command becomes
+  one commit straight on the default branch through the GitHub contents
+  API, so the next hourly post uses the new list. The user asked for this
+  to be "completely automatic assuming someone is allowed": the allowlist
+  is the review. With `auto_apply = false` the changes accumulate instead
+  in one pull request, "Watchlist changes from Discord", on the
+  `stonks/discord` branch; if no PR is open, any stale branch is deleted
+  and recreated from the default branch, and that mode needs the
+  repository setting that lets Actions create pull requests. Both use the
+  workflow's `GITHUB_TOKEN` (`contents: write`, `pull-requests: write`).
+- Replies say what happened (or link the PR) and never mention tokens;
+  network errors are reported by exception class only.

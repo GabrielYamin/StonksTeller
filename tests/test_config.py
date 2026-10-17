@@ -51,14 +51,16 @@ def test_commands_config_defaults_to_nobody(tmp_path):
 
 
 def test_commands_config_reads_ids_as_strings(tmp_path):
-    (tmp_path / "config.toml").write_text('[commands]\nallowed_users = ["123", 456]\n')
-    assert load_commands_config(tmp_path / "config.toml") == CommandsConfig(allowed_users=("123", "456"))
+    (tmp_path / "config.toml").write_text('[commands]\nallowed_users = ["123", 456]\nauto_apply = false\n')
+    assert load_commands_config(tmp_path / "config.toml") == CommandsConfig(allowed_users=("123", "456"), auto_apply=False)
+    assert CommandsConfig().auto_apply is True
 
 
 @pytest.mark.parametrize("body", [
     '[commands]\nallowed_users = "123"\n',          # not a list
     '[commands]\nallowed_users = ["gabe"]\n',       # not an ID
     '[commands]\nallowed = ["123"]\n',              # unknown key
+    '[commands]\nauto_apply = "yes"\n',             # wrong type
 ])
 def test_invalid_commands_config_raises(tmp_path, body):
     (tmp_path / "config.toml").write_text(body)

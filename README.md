@@ -80,7 +80,7 @@ A missing file means the defaults. Unknown keys are errors, so a typo can't sile
 
 ## Discord commands (optional)
 
-People on an allowlist can edit the watchlist from Discord. A second workflow polls the channel every 30 minutes and turns these messages into a pull request:
+People on an allowlist can edit the watchlist from Discord. A second workflow polls the channel every 30 minutes and acts on these messages:
 
 ```
 !stonks add QQQ
@@ -88,7 +88,7 @@ People on an allowlist can edit the watchlist from Discord. A second workflow po
 !stonks list
 ```
 
-The bot reacts ✅ or ❌ to each command and replies with the result. Add and remove requests accumulate in one pull request, "Watchlist changes from Discord", on the `stonks/discord` branch. Merge it when you're happy; the next poll starts a fresh one. A symbol is checked against Yahoo Finance before it's added, and anyone not on the allowlist just gets a ❌.
+The bot reacts ✅ or ❌ to each command and replies with the result. By default a change is committed straight to `main`, so the next hourly post already uses the new list. Set `auto_apply = false` under `[commands]` if you'd rather have requests collected in a pull request, "Watchlist changes from Discord", that you merge yourself. A symbol is checked against Yahoo Finance before it's added, and anyone not on the allowlist just gets a ❌.
 
 Setup:
 
@@ -99,16 +99,18 @@ Setup:
    ```toml
    [commands]
    allowed_users = ["123456789012345678"]
+   auto_apply = true
    ```
    The workflow refuses to run while this list is empty.
 5. **Secrets.** Add `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` as repository secrets, next to the webhook.
-6. **Let Actions open PRs.** Repo **Settings**, **Actions**, **General**, under Workflow permissions tick **Allow GitHub Actions to create and approve pull requests**. Without it the bot replies with a 403 from GitHub.
+6. **Only if `auto_apply = false`:** repo **Settings**, **Actions**, **General**, under Workflow permissions tick **Allow GitHub Actions to create and approve pull requests**. Without it the bot replies with a 403 from GitHub.
 
 Good to know:
 
 - Commands are picked up on the next poll (cron `7,37 * * * *`), not instantly. Change the cron if you want it faster; every run costs a few seconds of Actions time.
 - It's `!stonks`, not `/stonks`. A leading slash makes Discord try to run a real slash command, which would need a hosted endpoint.
-- The Tests workflow doesn't run on pull requests opened by the built-in Actions token. For a one-line watchlist change that's fine.
+- Commits made by the workflow land on `main` from GitHub's side, so run `git pull` before your next push or git will refuse it as out of date.
+- Pushes and pull requests made with the built-in Actions token don't trigger the Tests workflow. For a one-line watchlist change that's fine.
 - Locally, `uv run stonks-commands --dry-run` reads the channel and prints what it would do, with no reactions, replies or pull request. It needs the bot token and channel ID in `.env`.
 
 ## Behaviour and limits
