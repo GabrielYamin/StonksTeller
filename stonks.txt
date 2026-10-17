@@ -10,4 +10,3 @@ COKE    # Coca-Cola Consolidated (the bottler); The Coca-Cola Company is KO
 VOO
 VT
 V
-AAPL
