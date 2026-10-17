@@ -1,10 +1,10 @@
 # One symbol per line. Blank lines and anything after # are ignored.
-# Use Yahoo Finance symbols: ETFs and indexes work too (^IXIC = Nasdaq Composite).
+# Use Yahoo Finance symbols: ETFs and indexes work too (QQQ = Nasdaq-100 ETF).
 SAIL
 SPY
 SCHD
 AVGO    # Broadcom
-^IXIC   # Nasdaq Composite index
+QQQ     # Nasdaq-100 ETF
 CAT
 COKE    # Coca-Cola Consolidated (the bottler); The Coca-Cola Company is KO
 VOO
