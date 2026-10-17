@@ -364,5 +364,6 @@ watchlist from the channel, through a pull request, with no backend.
   and recreated from the default branch, and that mode needs the
   repository setting that lets Actions create pull requests. Both use the
   workflow's `GITHUB_TOKEN` (`contents: write`, `pull-requests: write`).
-- Replies say what happened (or link the PR) and never mention tokens;
+- Replies say the symbol will be added or removed in the next cycle,
+  never link the PR (user preference) and never mention tokens;
   network errors are reported by exception class only.

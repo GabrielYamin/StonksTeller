@@ -192,13 +192,10 @@ def run_commands(bot: BotClient, channel_id: str, pr: WatchlistPR | WatchlistCom
 def _announce(bot: BotClient, channel_id: str, outcome: Outcome, url: str | None) -> None:
     reply = outcome.reply
     if outcome.ok and outcome.change is not None:
-        symbol, adding = outcome.command.symbol, outcome.command.action == "add"
+        verb = "added" if outcome.command.action == "add" else "removed"
+        reply = f"**{outcome.command.symbol}** will be {verb} in the next cycle."
         if url:
-            reply = f"**{symbol}** will be {'added' if adding else 'removed'} when this pull request is merged: {url}"
-        elif adding:
-            reply = f"**{symbol}** added to the watchlist. The next hourly post will include it."
-        else:
-            reply = f"**{symbol}** removed from the watchlist."
+            reply += " It's waiting in a pull request until someone merges it."
     try:
         bot.add_reaction(channel_id, outcome.command.message_id, OK if outcome.ok else NO)
         if reply:

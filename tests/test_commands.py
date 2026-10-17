@@ -119,10 +119,11 @@ def test_run_commands_processes_oldest_first_and_announces():
     assert pr.text == "# list\nAAPL\nQQQ\n"
     assert bot.reactions == [("1", "✅"), ("2", "✅"), ("3", "❌")]
     assert bot.replies == [
-        ("1", "**QQQ** will be added when this pull request is merged: https://github.com/o/r/pull/7"),
-        ("2", "**SPY** will be removed when this pull request is merged: https://github.com/o/r/pull/7"),
+        ("1", "**QQQ** will be added in the next cycle. It's waiting in a pull request until someone merges it."),
+        ("2", "**SPY** will be removed in the next cycle. It's waiting in a pull request until someone merges it."),
         ("3", "Yahoo Finance doesn't know **NOPE**."),
     ]
+    assert not any("github.com" in reply for _, reply in bot.replies)
 
 
 def test_run_commands_direct_mode_wording():
@@ -134,8 +135,8 @@ def test_run_commands_direct_mode_wording():
     outcomes = run_commands(bot, "c", DirectTarget(TEXT), ALLOWED, known)
     assert all(o.ok for o in outcomes)
     assert bot.replies == [
-        ("1", "**QQQ** added to the watchlist. The next hourly post will include it."),
-        ("2", "**SPY** removed from the watchlist."),
+        ("1", "**QQQ** will be added in the next cycle."),
+        ("2", "**SPY** will be removed in the next cycle."),
     ]
 
 
