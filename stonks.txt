@@ -3,5 +3,10 @@
 SAIL
 SPY
 SCHD
-AVGO
-QQQ
+AVGO    # Broadcom
+^IXIC   # Nasdaq Composite index
+CAT
+COKE    # Coca-Cola Consolidated (the bottler); The Coca-Cola Company is KO
+VOO
+VT
+V
