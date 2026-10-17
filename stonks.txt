@@ -3,5 +3,5 @@
 SAIL
 SPY
 SCHD
-AVGO    # Broadcom
-^IXIC   # Nasdaq Composite index
+AVGO
+QQQ
