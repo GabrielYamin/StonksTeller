@@ -1,0 +1,7 @@
+# One symbol per line. Blank lines and anything after # are ignored.
+# Use Yahoo Finance symbols: ETFs and indexes work too (^IXIC = Nasdaq Composite).
+SAIL
+SPY
+SCHD
+AVGO    # Broadcom
+^IXIC   # Nasdaq Composite index

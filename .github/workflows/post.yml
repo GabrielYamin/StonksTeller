@@ -1,0 +1,43 @@
+name: Post stonks
+
+on:
+  schedule:
+    # Every hour 13:35–21:35 UTC, Mon–Fri. That covers 9:35–15:35 ET in both
+    # summer and winter; the script itself skips hours when the market is closed.
+    - cron: "35 13-21 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the message in the log instead of posting"
+        type: boolean
+        default: false
+      force:
+        description: "Skip the market-hours check"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --no-dev
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: >-
+          uv run --frozen --no-dev stonks
+          ${{ inputs.dry_run == true && '--dry-run' || '' }}
+          ${{ inputs.force == true && '--force' || '' }}

@@ -1,0 +1,8 @@
+# Display settings. Delete this file to get the defaults shown here.
+[display]
+title = "Stonks"                            # embed title prefix
+columns = ["price", "open", "day", "week"]  # which columns, in what order
+sort = "file"                               # "file" order, or "open" / "day" / "week" (biggest gain first)
+emoji = true                                # 🟢 / 🔴 / ⚪ next to every percentage
+color_by = "open"                           # column that drives the embed colour (green/red/grey)
+layout = "cards"                            # "cards": one small card per symbol, 3 across, phone-friendly; "table": monospace grid, desktop
