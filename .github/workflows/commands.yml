@@ -2,7 +2,7 @@ name: Discord commands
 
 on:
   schedule:
-    - cron: "7,37 * * * *"   # every 30 minutes, off the top of the hour
+    - cron: "*/10 * * * *"   # GitHub drops most firings on small repos; ask often, the reactions keep it idempotent
   workflow_dispatch:
     inputs:
       dry_run:

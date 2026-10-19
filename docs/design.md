@@ -367,3 +367,22 @@ watchlist from the channel, through a pull request, with no backend.
 - Replies say the symbol will be added or removed in the next cycle,
   never link the PR (user preference) and never mention tokens;
   network errors are reported by exception class only.
+
+## Scheduling reality (2026-10-19)
+
+Observed over the first weekend: GitHub granted about one in eight
+scheduled firings of a 30-minute cron on this repo, with gaps of 2 to 6
+hours, and none of the Monday post firings. GitHub documents `schedule` as
+best-effort; the user refused both an external trigger (a GitHub token
+would leave GitHub) and anything tied to their PC.
+
+Mitigation chosen (option A): ask far more often and make it idempotent.
+The post cron is `*/5 13-21 * * 1-5`; the workflow restores an Actions
+cache keyed by the current ET hour, the CLI (`--stamp-dir`) exits at once
+if that hour's marker exists, and after a real post it writes the marker
+and the workflow saves the cache. `--force` bypasses the marker but still
+writes it. Commands poll every 10 minutes; their reaction-based memory
+already made them idempotent. If GitHub still starves the repo, the
+fallback is moving the runtime to Cloudflare Workers (option B in the
+conversation), with the watchlist in Cloudflare storage so no GitHub
+token is needed there.

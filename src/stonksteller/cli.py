@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="symbol list, one per line (default: stonks.txt)")
     parser.add_argument("--config", type=Path, default=Path("config.toml"),
                         help="display settings (default: config.toml)")
+    parser.add_argument("--stamp-dir", type=Path, default=None,
+                        help="directory of per-hour markers: skip if this hour's marker exists, "
+                             "write one after posting (the scheduled workflow caches it)")
     return parser
 
 
@@ -64,6 +67,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     now = datetime.now(ET)
     if not args.force and not is_market_open(now, cal):
         log.info("market closed at %s; nothing to do", now.strftime("%Y-%m-%d %H:%M %Z"))
+        return EXIT_OK
+
+    stamp = args.stamp_dir / now.strftime("%Y-%m-%d-%H") if args.stamp_dir else None
+    if stamp is not None and stamp.exists() and not args.force:
+        log.info("already posted during hour %s; nothing to do", stamp.name)
         return EXIT_OK
 
     today = reference_session(now.date(), cal)
@@ -97,4 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         log.error("%s", exc)
         return EXIT_FAILURE
     log.info("posted %d symbols", len(quotes))
+    if stamp is not None:
+        stamp.parent.mkdir(parents=True, exist_ok=True)
+        stamp.write_text(now.isoformat(), encoding="utf-8")
     return EXIT_OK

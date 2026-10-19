@@ -2,9 +2,11 @@ name: Post stonks
 
 on:
   schedule:
-    # Every hour 13:35–21:35 UTC, Mon–Fri. That covers 9:35–15:35 ET in both
-    # summer and winter; the script itself skips hours when the market is closed.
-    - cron: "35 13-21 * * 1-5"
+    # Every 5 minutes 13:00–21:59 UTC, Mon–Fri. GitHub drops most scheduled
+    # firings on small repos, so we give it twelve chances an hour; the first
+    # run that lands in a market hour posts and leaves a cached marker, and the
+    # rest of that hour's runs exit immediately.
+    - cron: "*/5 13-21 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -34,10 +36,24 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --frozen --no-dev
+      - name: Work out the current market hour (ET)
+        id: hour
+        run: echo "hour=$(TZ=America/New_York date +%Y-%m-%d-%H)" >> "$GITHUB_OUTPUT"
+      - name: Restore this hour's posted marker, if any
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: .posted
+          key: posted-${{ steps.hour.outputs.hour }}
       - name: Post to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: >-
-          uv run --frozen --no-dev stonks
+          uv run --frozen --no-dev stonks --stamp-dir .posted
           ${{ inputs.dry_run == true && '--dry-run' || '' }}
           ${{ inputs.force == true && '--force' || '' }}
+      - name: Remember that this hour is done
+        if: hashFiles('.posted/*') != ''
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: .posted
+          key: posted-${{ steps.hour.outputs.hour }}

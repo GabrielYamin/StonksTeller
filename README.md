@@ -57,7 +57,7 @@ The URL is the only credential, and anyone holding it can post to that channel, 
 2. **Settings, Secrets and variables, Actions, New repository secret**: name `DISCORD_WEBHOOK_URL`, value the webhook URL.
 3. That's it. The **Post stonks** workflow runs on its own schedule.
 
-**Schedule.** The cron is `35 13-21 * * 1-5`: every hour from 13:35 to 21:35 UTC, Monday to Friday. GitHub cron only speaks UTC and knows nothing about daylight saving, so the workflow fires across the whole range year-round and the script checks the NYSE calendar itself, exiting without posting when the market is closed. Net effect: posts at 9:35, 10:35 … 15:35 ET, seven per trading day, with holidays and early closes respected. A run still counts as "open" for 20 minutes after the close, so the 15:35 run posts even when GitHub starts it late (it often does, by 5 to 15 minutes).
+**Schedule.** GitHub's cron is best-effort: on small repos it silently drops most scheduled firings, sometimes for hours. So the workflow asks to run every 5 minutes during market hours (`*/5 13-21 * * 1-5`, UTC) and makes that safe: the first run that lands in a given ET hour posts and leaves a marker in the Actions cache, and every later run in that hour exits at once. The script also checks the NYSE calendar itself and does nothing when the market is closed. Net effect: about one post per market hour, at whatever minute GitHub happens to grant, with holidays and early closes respected. Cron is UTC-only, so the range covers both summer and winter time.
 
 **Manual run.** Actions tab, **Post stonks**, **Run workflow**. Tick `dry_run` to see the message in the job log instead of posting, or `force` to post outside market hours.
 
@@ -107,7 +107,7 @@ Setup:
 
 Good to know:
 
-- Commands are picked up on the next poll (cron `7,37 * * * *`), not instantly. Change the cron if you want it faster; every run costs a few seconds of Actions time.
+- Commands are picked up on the next poll, not instantly. The workflow asks for every 10 minutes (`*/10 * * * *`); GitHub grants only some of those on small repos, so expect anything from minutes to a couple of hours.
 - It's `!stonks`, not `/stonks`. A leading slash makes Discord try to run a real slash command, which would need a hosted endpoint.
 - Commits made by the workflow land on `main` from GitHub's side, so run `git pull` before your next push or git will refuse it as out of date.
 - Pushes and pull requests made with the built-in Actions token don't trigger the Tests workflow. For a one-line watchlist change that's fine.
@@ -128,7 +128,7 @@ Good to know:
 - **`DISCORD_WEBHOOK_URL does not look like a Discord webhook URL`**: the value isn't of the form `https://discord.com/api/webhooks/<id>/<token>`. Check for stray quotes or spaces.
 - **`request to Discord failed: ConnectionError`**: network trouble. The URL is deliberately left out of the log because it is the secret.
 - **Every symbol is `n/a` or "fetching quotes failed"**: Yahoo changed something and `yfinance` needs updating. Run `uv lock --upgrade-package yfinance`, then `uv run pytest`, and commit `uv.lock`.
-- **Runs start late.** Normal for GitHub cron, especially at busy minutes. The 20-minute grace covers the last run of the day.
+- **Posts arrive at odd minutes, or an hour is missed.** GitHub's scheduler drops most firings on small repos; the 5-minute cron plus the hourly marker is the mitigation, not a cure. A missed hour means none of that hour's firings were granted.
 
 ## Development
 

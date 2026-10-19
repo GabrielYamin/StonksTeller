@@ -117,3 +117,27 @@ def test_oversized_watchlist_exit_2(workdir, posted, monkeypatch):
     monkeypatch.setattr(cli, "fetch_quotes",
                         lambda syms, *a: [Quote(s, 10.0, 10.0, 10.0, 10.0) for s in syms])
     assert cli.main([]) == 2 and posted == []
+
+
+def test_stamp_dir_skips_when_this_hour_already_posted(workdir, posted, monkeypatch):
+    from datetime import datetime
+    from stonksteller.market import ET
+    stamps = workdir / ".posted"
+    stamps.mkdir()
+    (stamps / datetime.now(ET).strftime("%Y-%m-%d-%H")).write_text("x")
+    monkeypatch.setattr(cli, "fetch_quotes", boom)
+    assert cli.main(["--stamp-dir", ".posted"]) == 0 and posted == []
+
+
+def test_stamp_is_written_after_posting_and_not_on_dry_run(workdir, posted, monkeypatch, capsys):
+    assert cli.main(["--dry-run", "--stamp-dir", ".posted"]) == 0
+    assert not (workdir / ".posted").exists()
+    assert cli.main(["--stamp-dir", ".posted"]) == 0 and len(posted) == 1
+    [stamp] = list((workdir / ".posted").iterdir())
+    assert len(stamp.name) == len("2026-10-19-14")
+    assert cli.main(["--stamp-dir", ".posted"]) == 0 and len(posted) == 1   # second run skips
+
+
+def test_force_ignores_the_stamp(workdir, posted):
+    assert cli.main(["--stamp-dir", ".posted"]) == 0
+    assert cli.main(["--force", "--stamp-dir", ".posted"]) == 0 and len(posted) == 2
