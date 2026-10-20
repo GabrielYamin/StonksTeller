@@ -8,4 +8,4 @@ compatibility_date = "2026-10-01"
 GITHUB_REPO = "GabrielYamin/StonksTeller"
 
 [triggers]
-crons = ["35 13-21 * * 1-5", "*/15 * * * *"]
+crons = ["35 13-21 * * 1-5", "*/5 * * * *"]

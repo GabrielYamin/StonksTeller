@@ -68,9 +68,9 @@ The Worker in `worker/index.js` has one job: on its cron triggers, call GitHub's
 1. **GitHub token.** GitHub, your avatar, **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**, **Generate new token**. Repository access: *Only select repositories*, pick this repo. Repository permissions: **Actions: Read and write** and nothing else (Metadata: read is added automatically). Set the expiry as long as GitHub allows and note the date; the Worker stops working when it expires. Copy the token.
 2. **Create the Worker.** Cloudflare dashboard, **Workers & Pages**, **Create**, **Create Worker**, name it `stonksteller-scheduler`, **Deploy**, then **Edit code**. Replace the editor's contents with `worker/index.js` from this repo and **Deploy** again.
 3. **Settings, Variables and Secrets.** Add a **Secret** named `GITHUB_TOKEN` with the token, and a plain text variable `GITHUB_REPO` with `GabrielYamin/StonksTeller`.
-4. **Settings, Triggers, Cron Triggers.** Add two, exactly as written, since the code maps each one to a workflow:
-   - `35 13-21 * * 1-5` starts the hourly post (UTC; covers 9:35 to 15:35 ET in both summer and winter, and the script skips closed hours).
-   - `*/15 * * * *` starts the Discord commands run.
+4. **Settings, Triggers, Cron Triggers.** Add two:
+   - `35 13-21 * * 1-5`, exactly as written, starts the hourly post (UTC; covers 9:35 to 15:35 ET in both summer and winter, and the script skips closed hours).
+   - Any other trigger starts the Discord commands run. `*/5 * * * *` is a good balance; every minute works too but floods the Actions history.
 5. **Check it.** After the next trigger time, the Worker's **Logs** tab shows `dispatched post.yml`, and the repo's Actions tab shows a run with the event "workflow_dispatch" and no actor name. If GitHub answers 404, the token can't see the repo; 403 means the Actions permission is missing.
 
 If you prefer the CLI, `worker/wrangler.toml` deploys the same thing with `npx wrangler deploy` followed by `npx wrangler secret put GITHUB_TOKEN`.

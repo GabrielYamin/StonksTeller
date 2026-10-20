@@ -7,22 +7,15 @@
 //
 // Cron triggers (Worker settings > Triggers), all UTC:
 //   35 13-21 * * 1-5   hourly during US market hours, summer and winter  -> post.yml
-//   */15 * * * *       every 15 minutes                                   -> commands.yml
+//   any other trigger  (for example */5 * * * *)                         -> commands.yml
 // The Python script still checks the NYSE calendar, so a dispatch while the
 // market is closed just exits.
 
-const WORKFLOW_FOR_CRON = {
-  "35 13-21 * * 1-5": "post.yml",
-  "*/15 * * * *": "commands.yml",
-};
+const POST_CRON = "35 13-21 * * 1-5";
 
 export default {
   async scheduled(event, env, ctx) {
-    const workflow = WORKFLOW_FOR_CRON[event.cron];
-    if (!workflow) {
-      console.log(`no workflow mapped to cron "${event.cron}"; check WORKFLOW_FOR_CRON`);
-      return;
-    }
+    const workflow = event.cron === POST_CRON ? "post.yml" : "commands.yml";
     ctx.waitUntil(dispatch(env, workflow));
   },
 
