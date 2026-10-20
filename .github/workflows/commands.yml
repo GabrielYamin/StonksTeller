@@ -1,6 +1,5 @@
 name: Discord commands
 
-# No cron here on purpose: a Cloudflare Worker starts this workflow (see README).
 on:
   workflow_dispatch:
     inputs:

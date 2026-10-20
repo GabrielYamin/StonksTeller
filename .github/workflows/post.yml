@@ -1,7 +1,5 @@
 name: Post stonks
 
-# No cron here on purpose: GitHub's scheduler starved this repo, so a
-# Cloudflare Worker starts this workflow on the hour instead (see README).
 on:
   workflow_dispatch:
     inputs:
