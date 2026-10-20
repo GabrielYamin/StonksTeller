@@ -1,8 +1,7 @@
 name: Discord commands
 
+# No cron here on purpose: a Cloudflare Worker starts this workflow (see README).
 on:
-  schedule:
-    - cron: "*/10 * * * *"   # GitHub drops most firings on small repos; ask often, the reactions keep it idempotent
   workflow_dispatch:
     inputs:
       dry_run:
