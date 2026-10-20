@@ -57,9 +57,23 @@ The URL is the only credential, and anyone holding it can post to that channel, 
 2. **Settings, Secrets and variables, Actions, New repository secret**: name `DISCORD_WEBHOOK_URL`, value the webhook URL.
 3. That's it. The **Post stonks** workflow runs on its own schedule.
 
-**Schedule.** The workflows deliberately have no cron of their own. GitHub's scheduler proved unusable for this repo (it granted a few firings a day, then none at all), so a small Cloudflare Worker starts the workflows instead through GitHub's `workflow_dispatch` API, every hour during market time for posts and every few minutes for commands. The script still checks the NYSE calendar itself and does nothing when the market is closed, so a dispatch outside trading hours is harmless. Setting up that Worker is described in its own section below once it exists.
+**Schedule.** The workflows deliberately have no cron of their own. GitHub's scheduler proved unusable for this repo (it granted a few firings a day, then none at all), so a small Cloudflare Worker starts the workflows instead through GitHub's `workflow_dispatch` API, every hour during market time for posts and every few minutes for commands. The script still checks the NYSE calendar itself and does nothing when the market is closed, so a dispatch outside trading hours is harmless. Setting it up is described under **Scheduling with a Cloudflare Worker** below.
 
 **Manual run.** Actions tab, **Post stonks**, **Run workflow**. Tick `dry_run` to see the message in the job log instead of posting, or `force` to post outside market hours.
+
+## Scheduling with a Cloudflare Worker
+
+The Worker in `worker/index.js` has one job: on its cron triggers, call GitHub's API to start a workflow. It runs on Cloudflare's free plan, holds a GitHub token that can do nothing except start workflow runs in this repo, and needs no local tooling.
+
+1. **GitHub token.** GitHub, your avatar, **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**, **Generate new token**. Repository access: *Only select repositories*, pick this repo. Repository permissions: **Actions: Read and write** and nothing else (Metadata: read is added automatically). Set the expiry as long as GitHub allows and note the date; the Worker stops working when it expires. Copy the token.
+2. **Create the Worker.** Cloudflare dashboard, **Workers & Pages**, **Create**, **Create Worker**, name it `stonksteller-scheduler`, **Deploy**, then **Edit code**. Replace the editor's contents with `worker/index.js` from this repo and **Deploy** again.
+3. **Settings, Variables and Secrets.** Add a **Secret** named `GITHUB_TOKEN` with the token, and a plain text variable `GITHUB_REPO` with `GabrielYamin/StonksTeller`.
+4. **Settings, Triggers, Cron Triggers.** Add two, exactly as written, since the code maps each one to a workflow:
+   - `35 13-21 * * 1-5` starts the hourly post (UTC; covers 9:35 to 15:35 ET in both summer and winter, and the script skips closed hours).
+   - `*/15 * * * *` starts the Discord commands run.
+5. **Check it.** After the next trigger time, the Worker's **Logs** tab shows `dispatched post.yml`, and the repo's Actions tab shows a run with the event "workflow_dispatch" and no actor name. If GitHub answers 404, the token can't see the repo; 403 means the Actions permission is missing.
+
+If you prefer the CLI, `worker/wrangler.toml` deploys the same thing with `npx wrangler deploy` followed by `npx wrangler secret put GITHUB_TOKEN`.
 
 ## Watchlist: `stonks.txt`
 

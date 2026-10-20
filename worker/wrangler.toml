@@ -1,0 +1,11 @@
+# Optional: for deploying with the wrangler CLI instead of the dashboard.
+#   cd worker && npx wrangler deploy && npx wrangler secret put GITHUB_TOKEN
+name = "stonksteller-scheduler"
+main = "index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+GITHUB_REPO = "GabrielYamin/StonksTeller"
+
+[triggers]
+crons = ["35 13-21 * * 1-5", "*/15 * * * *"]
