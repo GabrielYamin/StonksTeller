@@ -6,16 +6,20 @@
 //   GITHUB_REPO   text     e.g. "GabrielYamin/StonksTeller"
 //
 // Cron triggers (Worker settings > Triggers), all UTC:
-//   35 13-21 * * 1-5   hourly during US market hours, summer and winter  -> post.yml
-//   any other trigger  (for example */5 * * * *)                         -> commands.yml
+//   35 13-21 * * mon-fri   hourly during US market hours, summer and winter -> post.yml
+//   any other trigger      (for example */5 * * * *)                        -> commands.yml
+// Careful: Cloudflare numbers weekdays 1 = Sunday .. 7 = Saturday, so "1-5"
+// would mean Sunday to Thursday. Use the names.
 // The Python script still checks the NYSE calendar, so a dispatch while the
 // market is closed just exits.
 
-const POST_CRON = "35 13-21 * * 1-5";
+// The post trigger is recognised by its minute and hour range, so the day
+// part can be spelled any way Cloudflare accepts.
+const POST_CRON = /^35\s+13-21\s/;
 
 export default {
   async scheduled(event, env, ctx) {
-    const workflow = event.cron === POST_CRON ? "post.yml" : "commands.yml";
+    const workflow = POST_CRON.test(event.cron) ? "post.yml" : "commands.yml";
     ctx.waitUntil(dispatch(env, workflow));
   },
 

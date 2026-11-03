@@ -69,7 +69,7 @@ The Worker in `worker/index.js` has one job: on its cron triggers, call GitHub's
 2. **Create the Worker.** Cloudflare dashboard, **Workers & Pages**, **Create**, **Create Worker**, name it `stonksteller-scheduler`, **Deploy**, then **Edit code**. Replace the editor's contents with `worker/index.js` from this repo and **Deploy** again.
 3. **Settings, Variables and Secrets.** Add a **Secret** named `GITHUB_TOKEN` with the token, and a plain text variable `GITHUB_REPO` with `GabrielYamin/StonksTeller`.
 4. **Settings, Triggers, Cron Triggers.** Add two:
-   - `35 13-21 * * 1-5`, exactly as written, starts the hourly post (UTC; covers 9:35 to 15:35 ET in both summer and winter, and the script skips closed hours).
+   - `35 13-21 * * mon-fri` starts the hourly post (UTC; covers 9:35 to 15:35 ET in both summer and winter, and the script skips closed hours). Spell the days by name: Cloudflare counts 1 as Sunday, so `1-5` would skip Fridays.
    - Any other trigger starts the Discord commands run. `*/5 * * * *` is a good balance; every minute works too but floods the Actions history.
 5. **Check it.** After the next trigger time, the Worker's **Logs** tab shows `dispatched post.yml`, and the repo's Actions tab shows a run with the event "workflow_dispatch" and no actor name. If GitHub answers 404, the token can't see the repo; 403 means the Actions permission is missing.
 
