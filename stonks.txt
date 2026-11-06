@@ -12,3 +12,4 @@ VT
 V
 NVDA
 AMD
+RKUNY
