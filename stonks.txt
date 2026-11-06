@@ -11,3 +11,4 @@ VOO
 VT
 V
 NVDA
+AMD
